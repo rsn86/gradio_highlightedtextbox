@@ -1998,7 +1998,7 @@ function sl(n, e, t) {
     });
     for (let z = 0; z < I.length; z++) {
       let R = I[z];
-      if (R === "<" && (z + 5 <= I.length && I.slice(z + 1, z + 5) === "mark" || z + 6 <= I.length && I.slice(z + 2, z + 6)))
+      if (R === "<" && (z + 5 <= I.length && I.slice(z + 1, z + 5) === "mark" || z + 6 <= I.length && I.slice(z + 1, z + 6) == "/mark"))
         E = !0, j && p.push([j, T]), j = "", T = null;
       else if (R === ">" && E) {
         if (E = !1, Y.slice(0, 4) === "mark") {
