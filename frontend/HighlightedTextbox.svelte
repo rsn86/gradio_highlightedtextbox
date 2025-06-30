@@ -119,7 +119,7 @@
 		});
 		for (let i = 0; i < clean_marked_text.length; i++) {
 			let char = clean_marked_text[i];
-			if (char === "<" && (i+5) <= clean_marked_text.length && clean_marked_text.slice(i+1,i+5) === "mark") {
+			if (char === "<" && ((i+5 <= clean_marked_text.length && clean_marked_text.slice(i+1,i+5) === "mark") || (i+6 <= clean_marked_text.length && clean_marked_text.slice(i+2,i+6)))) {
 				in_tag = true;
 				if (text) {
 					new_value.push([text, category]);

@@ -8,7 +8,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gradio_highlightedtextbox"
-version = "0.0.13"
+version = "0.0.12"
 description = "Editable Gradio textarea supporting highlighting"
 readme = "README.md"
 license = "MIT"
