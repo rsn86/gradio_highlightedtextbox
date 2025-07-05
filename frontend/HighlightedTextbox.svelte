@@ -56,25 +56,33 @@
 		_color_map = correct_color_map(current_color_map, browser, ctx);
 	}
 
-	function set_text_from_value(as_output: boolean): void {
-		if (value.length > 0 && as_output) {
-			el_text = value.map(([text, _]) => text).join("");
-			marked_el_text = value.map(([text, category]) => {
-				if (category !== null) {
-					return `<mark class="hl ${category}" style="background-color:${_color_map[category].secondary}">${text}</mark>`;
-				} else {
-					return text;
-				}
-			}).join("");
-			tagged_text = value.map(([text, category]) => {
-				if (category !== null) {
-					return `<${category}>${text}</${category}>`;
-				} else {
-					return text;
-				}
-			}).join("");
-		}
-	}
+	function escapeHtml(text: string): string {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function set_text_from_value(as_output: boolean): void {
+        if (value.length > 0 && as_output) {
+            el_text = value.map(([text, _]) => text).join("");
+            marked_el_text = value.map(([text, category]) => {
+                // Escape HTML entities in the text
+                const escapedText = escapeHtml(text);
+                if (category !== null) {
+                    return `<mark class="hl ${category}" style="background-color:${_color_map[category].secondary}">${escapedText}</mark>`;
+                } else {
+                    return escapedText;
+                }
+            }).join("");
+            tagged_text = value.map(([text, category]) => {
+                if (category !== null) {
+                    return `<${category}>${text}</${category}>`;
+                } else {
+                    return text;
+                }
+            }).join("");
+        }
+    }
 
 	$: set_color_map();
 	$: set_text_from_value(true);
@@ -108,42 +116,66 @@
 	});
 
 	function set_value_from_marked_span(): void {
-		let new_value: [string, string | null][] = [];
-		let text = "";
-		let category = null;
-		let in_tag = false;
-		let tag = "";
-		// Replace &nbsp;, &amp;, &lt;, &gt; with their corresponding characters
-		let clean_marked_text = marked_el_text.replace(/&nbsp;|&amp;|&lt;|&gt;/g, function(m) {
-			return {"&nbsp;":" ", "&amp;":"&", "&lt;":"<", "&gt;":">"}[m];
-		});
-		for (let i = 0; i < clean_marked_text.length; i++) {
-			let char = clean_marked_text[i];
-			if (char === "<" && ((i+5 <= clean_marked_text.length && clean_marked_text.slice(i+1,i+5) === "mark") || (i+6 <= clean_marked_text.length && clean_marked_text.slice(i+1,i+6) == '/mark'))) {
-				in_tag = true;
-				if (text) {
-					new_value.push([text, category]);
-				}
-				text = "";
-				category = null;
-			} else if (char === ">" && in_tag) {
-				in_tag = false;
-				if (tag.slice(0, 4) === "mark") {
-					let match = /class="hl ([^"]+)"/.exec(tag);
-					category = match ? match[1] : null;
-				}
-				tag = "";
-			} else if (in_tag) {
-				tag += char;
-			} else {
-				text += char;
-			}
-		}
-		if (text) {
-			new_value.push([text, category]);
-		}
-		value = new_value;
-	}
+        let new_value: [string, string | null][] = [];
+        let text = "";
+        let category = null;
+        
+        // Create a temporary container to parse the HTML properly
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = marked_el_text;
+        
+        // Function to recursively process nodes
+        function processNode(node: Node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                // Text node - add to current text
+                text += node.textContent || '';
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const element = node as HTMLElement;
+                
+                if (element.tagName.toLowerCase() === 'mark') {
+                    // Save any accumulated text before the mark
+                    if (text) {
+                        new_value.push([text, category]);
+                        text = "";
+                    }
+                    
+                    // Extract category from mark class
+                    const classList = element.className.split(' ');
+                    const hlIndex = classList.indexOf('hl');
+                    category = hlIndex >= 0 && hlIndex + 1 < classList.length ? classList[hlIndex + 1] : null;
+                    
+                    // Process mark content
+                    for (let child of element.childNodes) {
+                        processNode(child);
+                    }
+                    
+                    // Save marked text
+                    if (text) {
+                        new_value.push([text, category]);
+                        text = "";
+                        category = null;
+                    }
+                } else {
+                    // Other elements - process children
+                    for (let child of element.childNodes) {
+                        processNode(child);
+                    }
+                }
+            }
+        }
+        
+        // Process all nodes
+        for (let node of tempDiv.childNodes) {
+            processNode(node);
+        }
+        
+        // Add any remaining text
+        if (text) {
+            new_value.push([text, category]);
+        }
+        
+        value = new_value;
+    }
 
 	function handle_remove_tags(): void {
 		marked_el_text = el_text;
